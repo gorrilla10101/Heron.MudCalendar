@@ -5,7 +5,6 @@ using MudBlazor;
 using MudBlazor.Extensions;
 using MudBlazor.Utilities;
 using System.Diagnostics.CodeAnalysis;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 using EnumExtensions = Heron.MudCalendar.Extensions.EnumExtensions;
 
 namespace Heron.MudCalendar;
@@ -41,7 +40,7 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
             if (Calendar.CellRangeSelected.HasDelegate)
             {
                 _jsService ??= new JsService(JsRuntime);
-                await _jsService.AddMultiSelect(CellsInDay, Calendar._id);
+                await _jsService.AddMultiSelect(CellsInDay, Calendar.Id);
                 _jsService.OnCellsSelected += OnCellRangeSelected;
             }
 
@@ -118,7 +117,7 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
     }
 
     /// <summary>
-    /// Styles for the cell where the time is displayed..
+    /// Styles for the cell where the time is displayed.
     /// </summary>
     /// <param name="row">The row being styled.</param>
     /// <returns></returns>
@@ -173,7 +172,7 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
     }
 
     /// <summary>
-    /// Method invoked when the user clicks on the hyper link in the cell.
+    /// Method invoked when the user clicks on the hyperlink in the cell.
     /// </summary>
     /// <param name="cell">The cell that was clicked.</param>
     /// <param name="row">The row that was clicked.</param>
@@ -205,17 +204,18 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
     /// <param name="sender">The source object that triggered the selection event.</param>
     /// <param name="selectedCells">A collection of selected cells, each represented as a tuple containing the date and row index.</param>
     /// <returns></returns>
-    protected virtual async void OnCellRangeSelected(object? sender, IEnumerable<(DateTime date, int row)> selectedCells)
+    protected virtual async Task OnCellRangeSelected(object? sender, IEnumerable<(DateTime date, int row)> selectedCells)
     {
-        var start = selectedCells.First();
-        var end = selectedCells.Last();
+        var selectedCellsList = selectedCells.ToList();
+        var start = selectedCellsList.First();
+        var end = selectedCellsList.Last();
         var dateStart = start.date.AddMinutes(start.row * (int)Calendar.DayTimeInterval);
         var dateEnd = end.date.AddMinutes((end.row + 1) * (int)Calendar.DayTimeInterval);
         await Calendar.CellRangeSelected.InvokeAsync(new DateRange(dateStart, dateEnd));
     }
 
     /// <summary>
-    /// Method invoked when the user right-clicks on the hyper link in the cell.
+    /// Method invoked when the user right-clicks on the hyperlink in the cell.
     /// </summary>
     /// <param name="mouseEventArgs">The mouse event arguments.</param>
     /// <param name="cell">The cell that was clicked.</param>
@@ -286,11 +286,13 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
     /// <returns>A task representing the asynchronous operation of invoking the item changed event.</returns>
     protected Task ItemHeightChanged(T item, int intervals)
     {
+        var dates = (item.Start, item.End);
+        
         // Calculate end time from height
         var minutes = intervals * (int)Calendar.DayTimeInterval;
         item.End = item.Start.AddMinutes(minutes);
-        
-        return Calendar.ItemChanged.InvokeAsync(item);
+
+        return dates != (item.Start, item.End) ? Calendar.ItemChanged.InvokeAsync(item) : Task.CompletedTask;
     }
 
     private double TimelinePosition()
@@ -383,7 +385,7 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
                 throw new ApplicationException("End date of calendar item must be after start date");
             }
 
-            // Create new position object
+            // Create a new position object
             var position = new ItemPosition<T> { Item = item, Position = 0, Total = overlaps.Count + 1, Date = date };
             position.Top = CalcTop(position);
             position.Height = CalcHeight(position);
@@ -443,6 +445,7 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
     {
         if (dropItem.Item == null) return;
         var item = dropItem.Item;
+        var dates = (item.Start, item.End);
         var duration = item.End?.Subtract(item.Start) ?? TimeSpan.Zero;
 
         var ids = dropItem.DropzoneIdentifier.Split("_");
@@ -468,7 +471,10 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
 
         Calendar.Refresh();
 
-        await Calendar.ItemChanged.InvokeAsync(item);
+        if (dates != (item.Start, item.End))
+        {
+            await Calendar.ItemChanged.InvokeAsync(item);
+        }
     }
 
     private bool IsHourCell(int row)
@@ -479,6 +485,11 @@ public abstract partial class DayWeekViewBase<[DynamicallyAccessedMembers(Dynami
     public void Dispose()
     {
         GC.SuppressFinalize(this);
+        
+        if (_jsService != null)
+        {
+            _jsService.OnCellsSelected -= OnCellRangeSelected;
+        }
 
         _jsService?.Dispose();
     }
