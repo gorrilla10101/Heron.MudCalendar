@@ -26,7 +26,7 @@
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 			<PrivateAssets>all</PrivateAssets>
 		</PackageReference>
-		<PackageReference Include="MudBlazor" Version="8.15.0" />
+		<PackageReference Include="MudBlazor" Version="9.0.0-preview.1" />
 		<PackageReference Include="ReportGenerator" Version="5.4.1" />
 	</ItemGroup>
 	

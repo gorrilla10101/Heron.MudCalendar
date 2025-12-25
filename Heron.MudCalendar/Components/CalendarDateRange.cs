@@ -1,4 +1,5 @@
 using System.Globalization;
+using Microsoft.VisualBasic;
 using MudBlazor;
 
 namespace Heron.MudCalendar;
@@ -11,63 +12,53 @@ public class CalendarDateRange : DateRange
     private static CultureInfo _culture = CultureInfo.InvariantCulture;
     private readonly Calendar _calendar;
 
-    public CalendarDateRange(DateTime currentDay, CalendarView view, CultureInfo culture, DayOfWeek? firstDayOfWeek = null)
+    public CalendarDateRange(DateTime currentDay, CalendarView view, CultureInfo culture, DayOfWeek? firstDayOfWeek = null):base(SetStart(firstDayOfWeek, view, currentDay, culture.Calendar), SetEnd(firstDayOfWeek, view, currentDay, culture.Calendar))
     {
         _culture = culture;
         _calendar = culture.Calendar;
         _currentDay = currentDay;
         View = view;
-        
-        SetStart(firstDayOfWeek);
-        SetEnd(firstDayOfWeek);
     }
 
-    private void SetStart(DayOfWeek? firstDayOfWeek)
+    private static DateTime SetStart(DayOfWeek? firstDayOfWeek, CalendarView view, DateTime currentDay, Calendar calendar)
     {
-        switch (View)
+        switch (view)
         {
             case CalendarView.Day:
-                Start = _currentDay.Date;
-                break;
+                return currentDay.Date;
             case CalendarView.Week:
             case CalendarView.WorkWeek:
-                Start = GetFirstWeekDate(_currentDay, firstDayOfWeek);
-                break;
+                return GetFirstWeekDate(currentDay, firstDayOfWeek);
             case CalendarView.Month:
             default:
-                Start = GetFirstMonthDate(_currentDay, firstDayOfWeek);
-                break;
+                return GetFirstMonthDate(currentDay, firstDayOfWeek, calendar);
         }
     }
 
-    private void SetEnd(DayOfWeek? firstDayOfWeek)
+    private static DateTime SetEnd(DayOfWeek? firstDayOfWeek, CalendarView view, DateTime currentDay, Calendar calendar)
     {
-        switch (View)
+        switch (view)
         {
             case CalendarView.Day:
-                End = _currentDay.Date;
-                break;
+                return currentDay.Date;
             case CalendarView.Week:
-                End = GetLastWeekDate(_currentDay, firstDayOfWeek);
-                break;
+                return GetLastWeekDate(currentDay, firstDayOfWeek);
             case CalendarView.WorkWeek:
-                End = GetLastWorkWeekDate(_currentDay, firstDayOfWeek);
-                break;
+                return GetLastWorkWeekDate(currentDay, firstDayOfWeek);
             case CalendarView.Month:
             default:
-                End = GetLastMonthDate(_currentDay, firstDayOfWeek);
-                break;
+                return GetLastMonthDate(currentDay, firstDayOfWeek, calendar);
         }
     }
     
-    public DateTime GetFirstMonthDate(DateTime day, DayOfWeek? firstDayOfWeek)
+    public static DateTime GetFirstMonthDate(DateTime day, DayOfWeek? firstDayOfWeek, Calendar calendar)
     {
         // Get the year and month in the target calendar system
-        var year = _calendar.GetYear(day);
-        var month = _calendar.GetMonth(day);
+        var year = calendar.GetYear(day);
+        var month = calendar.GetMonth(day);
 
         // Get the first day of the month in the target calendar
-        var firstDayOfMonth = _calendar.ToDateTime(year, month, 1, 0, 0, 0, 0);
+        var firstDayOfMonth = calendar.ToDateTime(year, month, 1, 0, 0, 0, 0);
 
         // Adjust to the start of the week
         firstDayOfMonth = firstDayOfMonth.AddDays(GetDayOfWeek(firstDayOfMonth, firstDayOfWeek) * -1);
@@ -75,18 +66,18 @@ public class CalendarDateRange : DateRange
         return firstDayOfMonth;
     }
     
-    public DateTime GetLastMonthDate(DateTime day, DayOfWeek? firstDayOfWeek)
+    public static DateTime GetLastMonthDate(DateTime day, DayOfWeek? firstDayOfWeek, Calendar calendar)
     {
         
         // Get the year and month in the target calendar system
-        var year = _calendar.GetYear(day);
-        var month = _calendar.GetMonth(day);
+        var year = calendar.GetYear(day);
+        var month = calendar.GetMonth(day);
 
         // Get the number of days in this month
-        var daysInMonth = _calendar.GetDaysInMonth(year, month);
+        var daysInMonth = calendar.GetDaysInMonth(year, month);
 
         // Get the last day of the month in the target calendar
-        var lastDayOfMonth = _calendar.ToDateTime(year, month, daysInMonth, 0, 0, 0, 0);
+        var lastDayOfMonth = calendar.ToDateTime(year, month, daysInMonth, 0, 0, 0, 0);
 
         // Adjust to the end of the week
         lastDayOfMonth = lastDayOfMonth.AddDays(6 - GetDayOfWeek(lastDayOfMonth, firstDayOfWeek));
